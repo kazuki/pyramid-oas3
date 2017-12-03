@@ -16,7 +16,8 @@ def create_webapp(schema_name, patterns):
     }
 
     def test(request):
-        return Response(b64encode(pickle.dumps(request.oas3_data)))
+        return Response(b64encode(pickle.dumps(
+            (request.oas3_data, request.oas3_body))))
 
     with Configurator(settings=settings) as config:
         for i, p in enumerate(patterns):

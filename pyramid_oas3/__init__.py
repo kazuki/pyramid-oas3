@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+import json
 from urllib.parse import parse_qs
 
 from jsonschema import Draft4Validator, draft4_format_checker
 import pyramid
-from pyramid.httpexceptions import HTTPBadRequest
+from pyramid.httpexceptions import HTTPBadRequest, HTTPNotAcceptable
 
 from pyramid_oas3.resolve import resolve_refs
 from pyramid_oas3.types import (
@@ -74,7 +75,24 @@ def _validate_and_parse(request, path_matches, op_obj):
     for param_obj in op_obj.get('parameters', []):
         params.update(_validate_and_parse_param(
             request, param_obj, path_matches, queries))
-    return params, None
+
+    body = None
+    reqbody = op_obj.get('requestBody')
+    if reqbody:
+        accept_types = set(reqbody.get('content', {}).keys())
+        if not accept_types or request.content_type not in accept_types:
+            raise HTTPNotAcceptable
+        media_type_obj = reqbody.get('content', {}).get('application/json')
+        if media_type_obj is not None:
+            required = reqbody.get('required', False)
+            body = request.body
+            if required and not body:
+                raise HTTPBadRequest('json body is required')
+            body = json.loads(body)
+            json_schema = media_type_obj.get('schema')
+            if json_schema:
+                _validate(json_schema, body)
+    return params, body
 
 
 def _validate_and_parse_param(request, param_obj, path_matches, queries):

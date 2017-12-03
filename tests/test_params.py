@@ -10,12 +10,16 @@ from common import create_webapp
 class ParameterTests(unittest.TestCase):
     def setUp(self):
         self.app = create_webapp(
-            'test_schema0', [
+            'test_params', [
                 '/test_type_convert',
                 '/test_required',
                 '/path_test/{d0}/{d1}/{d2}/{d3}/{d4}',
                 '/test_invalid',
             ])
+
+    def _get(self, url, **kwargs):
+        return pickle.loads(base64.b64decode(
+            self.app.get(url, **kwargs).body))[0]
 
     def test_type_convert(self):
         expected = {
@@ -64,30 +68,24 @@ class ParameterTests(unittest.TestCase):
                 quote_plus(v) if isinstance(v, str) else quote_from_bytes(v)))
         for v in expected['p13']:
             qs.append('p13={}'.format(v))
-        res = pickle.loads(base64.b64decode(self.app.get(
-            '/test_type_convert?' + '&'.join(qs), status=200).body))
+        res = self._get('/test_type_convert?' + '&'.join(qs), status=200)
         self.assertEqual(res, expected)
-        self.assertEqual(pickle.loads(base64.b64decode(self.app.get(
-            '/test_type_convert', status=200).body)), {})
+        self.assertEqual(self._get('/test_type_convert', status=200), {})
 
     def test_required(self):
-        res = pickle.loads(base64.b64decode(
-            self.app.get('/test_required?p1=A', status=200).body))
+        res = self._get('/test_required?p1=A', status=200)
         self.assertEqual(res, {'p1': 'A'})
-        res = pickle.loads(base64.b64decode(
-            self.app.get('/test_required?p0=A&p1=B', status=200).body))
+        res = self._get('/test_required?p0=A&p1=B', status=200)
         self.assertEqual(res, {'p0': 'A', 'p1': 'B'})
         self.app.get('/test_required?p0=A', status=400)
 
     def test_ignore_unknown_query(self):
-        res = pickle.loads(base64.b64decode(
-            self.app.get('/test_required?p1=A&unknown=B', status=200).body))
+        res = self._get('/test_required?p1=A&unknown=B', status=200)
         self.assertEqual(res, {'p1': 'A'})
 
     def test_path(self):
         path = '/path_test/foo/123/a,b,c/R,255,G,255,B,255/R=255,G=255,B=255'
-        res = pickle.loads(base64.b64decode(
-            self.app.get(path, status=200).body))
+        res = self._get(path, status=200)
         self.assertEqual(res, {
             'd0': 'foo',
             'd1': 123,
