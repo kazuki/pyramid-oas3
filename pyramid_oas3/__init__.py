@@ -1,0 +1,148 @@
+# -*- coding: utf-8 -*-
+from urllib.parse import parse_qs
+
+from jsonschema import Draft4Validator, draft4_format_checker
+import pyramid
+from pyramid.httpexceptions import HTTPBadRequest
+
+from pyramid_oas3.resolve import resolve_refs
+from pyramid_oas3.types import (
+    _convert_type, _convert_string_format, _convert_style)
+
+
+def includeme(config):
+    settings = {
+        k[13:]: v
+        for k, v in config.registry.settings.items()
+        if k.startswith('pyramid_oas3.')
+    }
+    schema = settings['schema']
+
+    # 検証を簡単にするために $ref をすべて解決する。
+    # TODO(_): メモリ効率が著しく悪いので、将来的には $ref のまま処理したい…
+    resolve_refs(schema)
+
+    config.add_tween(
+        "pyramid_oas3.validation_tween_factory",
+        under=pyramid.tweens.EXCVIEW
+    )
+
+
+def validation_tween_factory(handler, registry):
+    from pyramid.interfaces import IRoutesMapper
+
+    paths = registry.settings['pyramid_oas3.schema']['paths']
+    route_mapper = registry.queryUtility(IRoutesMapper)
+
+    def validator_tween(request):
+        route_info = route_mapper(request)
+        route = route_info.get('route', None)
+        if not route:  # pragma: no cover
+            return handler(request)
+        path_item = paths.get(route.path)
+        if path_item:
+            op_obj = path_item.get(request.method.lower())
+        if not op_obj:  # pragma: no cover
+            return handler(request)
+        try:
+            params, body = _validate_and_parse(
+                request, route_info.get('match', {}), op_obj)
+
+            def oas3_data(_):
+                return params
+
+            def oas3_body(_):
+                return body
+
+            request.set_property(oas3_data)
+            request.set_property(oas3_body)
+            response = handler(request)
+        finally:
+            pass
+        return response
+    return validator_tween
+
+
+def _validate_and_parse(request, path_matches, op_obj):
+    params, queries = {}, {}
+    if request.query_string:
+        try:
+            queries = parse_qs(request.query_string,
+                               keep_blank_values=True, strict_parsing=True)
+        except Exception:
+            raise HTTPBadRequest('cannot parse query string')
+    for param_obj in op_obj.get('parameters', []):
+        params.update(_validate_and_parse_param(
+            request, param_obj, path_matches, queries))
+    return params, None
+
+
+def _validate_and_parse_param(request, param_obj, path_matches, queries):
+    if param_obj.get('allowEmptyValue', False):
+        raise NotImplementedError  # pragma: no cover
+    in_, name, schema, value = (
+        param_obj['in'], param_obj['name'], param_obj.get('schema'), None)
+    style = param_obj.get(
+        'style', 'form' if in_ in ('query', 'cookie') else 'simple')
+    explode = param_obj.get('explode', True if style == 'form' else False)
+    typ = schema['type'] if schema else 'object'
+
+    if style in ('matrix', 'label', 'spaceDelimited', 'pipeDelimited'):
+        raise NotImplementedError  # pragma: no cover
+
+    if in_ == 'path':
+        value = path_matches[name]  # always successful
+    elif in_ == 'query':
+        if style == 'form' and typ == 'object' and explode:
+            raise NotImplementedError  # pragma: no cover
+        if style == 'deepObject':
+            value = {}
+            for k, v in queries.items():
+                if k.startswith(name + '[') and k[-1] == ']':
+                    value[k[len(name)+1:-1]] = v[0]
+            if not value:
+                value = None
+        else:
+            if name in queries:
+                value = queries[name]
+                if not (style == 'form' and explode and typ == 'array'):
+                    value = value[0]
+    elif in_ == 'header' and name in request.headers:
+        value = request.headers[name]
+    elif in_ == 'cookie':  # pragma: no cover
+        raise NotImplementedError
+    if param_obj.get('required', False) and value is None:
+        raise HTTPBadRequest(
+            'required parameter "{}" is not found in {}'.format(name, in_))
+    if value is None:
+        return {}
+
+    if not isinstance(value, dict):
+        try:
+            value = _convert_style(style, explode, typ, value)
+        except Exception as e:
+            raise HTTPBadRequest(
+                'invalid style of "{}": {}'.format(name, e))
+    if schema:
+        try:
+            value = _convert_type(schema, value)
+        except Exception as e:
+            raise HTTPBadRequest(
+                'invalid value of "{}": {}'.format(name, e))
+        _validate(schema, value)
+        try:
+            value = _convert_string_format(schema, value)
+        except Exception as e:
+            raise HTTPBadRequest(
+                'invalid format of "{}": {}'.format(name, e))
+    return {name: value}
+
+
+def _validate(schema, instance):
+    validator = Draft4Validator(schema, format_checker=draft4_format_checker)
+    errors = [
+        e.message
+        for e in validator.iter_errors(instance)
+    ]
+    if errors:
+        raise HTTPBadRequest('\r\n\r\n'.join(errors).strip())

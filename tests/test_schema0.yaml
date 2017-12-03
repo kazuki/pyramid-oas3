@@ -1,0 +1,220 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Swagger Petstore
+  license:
+    name: MIT
+servers:
+  - url: http://example.com/v1
+paths:
+  /test_type_convert:
+    get:
+      parameters:
+        - name: p0
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: p1
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: p2
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - name: p3
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: p4
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+        - name: p5
+          in: query
+          required: false
+          schema:
+            type: number
+            format: double
+        - name: p6
+          in: query
+          required: false
+          schema:
+            type: string
+            format: byte
+        - name: p7
+          in: query
+          required: false
+          schema:
+            type: string
+            format: binary
+        - name: p8
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: p9
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: p10
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: p11
+          in: query
+          required: false
+          style: deepObject
+          schema:
+            type: object
+            properties:
+              num:
+                type: integer
+              str:
+                type: string
+            additionalProperties:
+              type: number
+        - name: p12
+          in: query
+          required: false
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: boolean
+        - name: p13
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: integer
+        - name: p14
+          in: query
+          required: false
+          style: form
+          explode: false
+          schema:
+            type: object
+            properties:
+              foo:
+                type: integer
+              bar:
+                type: boolean
+      responses:
+        '200':
+          content:
+            text/plain:
+  /test_required:
+    get:
+      parameters:
+        - name: p0
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: p1
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            text/plain:
+  /path_test/{d0}/{d1}/{d2}/{d3}/{d4}:
+    get:
+      parameters:
+        - name: d0
+          in: path
+          schema:
+            type: string
+        - name: d1
+          in: path
+          schema:
+            type: integer
+        - name: d2
+          in: path
+          schema:
+            type: array
+            items:
+              type: string
+        - name: d3
+          in: path
+          explode: false
+          schema:
+            type: object
+            additionalProperties:
+              type: integer
+        - name: d4
+          in: path
+          explode: true
+          schema:
+            type: object
+            additionalProperties:
+              type: integer
+      responses:
+        '200':
+          content:
+            text/plain:
+  /test_invalid:
+    get:
+      parameters:
+        - name: p0
+          in: query
+          schema:
+            type: integer
+            format: int32
+        - name: p1
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: p2
+          in: query
+          schema:
+            type: boolean
+        - name: p3
+          in: query
+          schema:
+            type: number
+        - name: p4
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: p5
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: p6
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: object
+        - name: p7
+          in: query
+          schema:
+            type: string
+            enum: ['foo', 'bar']
+      responses:
+        '200':
+          content:
+            text/plain:
