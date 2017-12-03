@@ -7,7 +7,7 @@ from pyramid.response import Response
 from webtest import TestApp
 
 
-def create_webapp(schema_name, patterns):
+def create_webapp(schema_name, patterns, func=None):
     import yaml
     settings = {
         'pyramid.includes': 'pyramid_oas3',
@@ -24,4 +24,6 @@ def create_webapp(schema_name, patterns):
             name = 'test{}'.format(i)
             config.add_route(name, p)
             config.add_view(test, route_name=name)
+        if func:
+            func(config)
         return TestApp(config.make_wsgi_app())

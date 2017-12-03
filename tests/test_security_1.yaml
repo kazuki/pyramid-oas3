@@ -1,0 +1,29 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Test
+  license:
+    name: MIT
+servers:
+  - url: http://example.com/v1
+paths:
+  /:
+    get:
+      responses:
+        '200':
+          content:
+            text/plain:
+  /auth_required:
+    get:
+      security:
+        - api_key: []
+      responses:
+        '200':
+          content:
+            text/plain:
+components:
+   securitySchemes:
+     api_key:
+       type: apiKey
+       name: X-Auth-Token
+       in: header

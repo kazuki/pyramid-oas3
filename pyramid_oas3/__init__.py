@@ -4,7 +4,8 @@ from urllib.parse import parse_qs
 
 from jsonschema import Draft4Validator, draft4_format_checker
 import pyramid
-from pyramid.httpexceptions import HTTPBadRequest, HTTPNotAcceptable
+from pyramid.httpexceptions import (
+    HTTPBadRequest, HTTPNotAcceptable, HTTPUnauthorized)
 
 from pyramid_oas3.resolve import resolve_refs
 from pyramid_oas3.types import (
@@ -32,7 +33,9 @@ def includeme(config):
 def validation_tween_factory(handler, registry):
     from pyramid.interfaces import IRoutesMapper
 
-    paths = registry.settings['pyramid_oas3.schema']['paths']
+    schema = registry.settings['pyramid_oas3.schema']
+    paths = schema['paths']
+    default_security = schema.get('security', None)
     route_mapper = registry.queryUtility(IRoutesMapper)
 
     def validator_tween(request):
@@ -46,6 +49,7 @@ def validation_tween_factory(handler, registry):
         if not op_obj:  # pragma: no cover
             return handler(request)
         try:
+            _check_security(default_security, request, op_obj)
             params, body = _validate_and_parse(
                 request, route_info.get('match', {}), op_obj)
 
@@ -62,6 +66,14 @@ def validation_tween_factory(handler, registry):
             pass
         return response
     return validator_tween
+
+
+def _check_security(default_security, request, op_obj):
+    requires = op_obj.get('security', default_security)
+    if not requires:
+        return
+    if request.authenticated_userid is None:
+        raise HTTPUnauthorized
 
 
 def _validate_and_parse(request, path_matches, op_obj):

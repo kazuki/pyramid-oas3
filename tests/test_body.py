@@ -5,7 +5,7 @@ import unittest
 from common import create_webapp
 
 
-class ParameterTests(unittest.TestCase):
+class BodyTests(unittest.TestCase):
     def setUp(self):
         self.app = create_webapp(
             'test_body', [
