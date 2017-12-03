@@ -7,13 +7,16 @@ from pyramid.response import Response
 from webtest import TestApp
 
 
-def create_webapp(schema_name, patterns, func=None):
+def create_webapp(schema_name, patterns, func=None, settings=None):
     import yaml
+    temp = settings
     settings = {
         'pyramid.includes': 'pyramid_oas3',
         'pyramid_oas3.schema': yaml.load(open(os.path.join(
             os.path.dirname(__file__), '{}.yaml'.format(schema_name))).read()),
     }
+    if temp:
+        settings.update(temp)
 
     def test(request):
         return Response(b64encode(pickle.dumps(

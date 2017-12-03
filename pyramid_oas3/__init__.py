@@ -5,11 +5,15 @@ from urllib.parse import parse_qs
 from jsonschema import Draft4Validator, draft4_format_checker
 import pyramid
 from pyramid.httpexceptions import (
-    HTTPBadRequest, HTTPNotAcceptable, HTTPUnauthorized)
+    HTTPBadRequest, HTTPNotAcceptable,
+    HTTPUnauthorized, HTTPInternalServerError)
 
 from pyramid_oas3.resolve import resolve_refs
 from pyramid_oas3.types import (
     _convert_type, _convert_string_format, _convert_style)
+
+
+MIME_JSON = 'application/json'
 
 
 def includeme(config):
@@ -34,6 +38,8 @@ def validation_tween_factory(handler, registry):
     from pyramid.interfaces import IRoutesMapper
 
     schema = registry.settings['pyramid_oas3.schema']
+    validate_response = registry.settings.get(
+        'pyramid_oas3.validate_response', False)
     paths = schema['paths']
     default_security = schema.get('security', None)
     route_mapper = registry.queryUtility(IRoutesMapper)
@@ -48,22 +54,40 @@ def validation_tween_factory(handler, registry):
             op_obj = path_item.get(request.method.lower())
         if not op_obj:  # pragma: no cover
             return handler(request)
-        try:
-            _check_security(default_security, request, op_obj)
-            params, body = _validate_and_parse(
-                request, route_info.get('match', {}), op_obj)
 
-            def oas3_data(_):
-                return params
+        _check_security(default_security, request, op_obj)
+        params, body = _validate_and_parse(
+            request, route_info.get('match', {}), op_obj)
 
-            def oas3_body(_):
-                return body
+        def oas3_data(_):
+            return params
 
-            request.set_property(oas3_data)
-            request.set_property(oas3_body)
-            response = handler(request)
-        finally:
-            pass
+        def oas3_body(_):
+            return body
+
+        request.set_property(oas3_data)
+        request.set_property(oas3_body)
+        response = handler(request)
+
+        if validate_response:
+            responses_obj = op_obj['responses']
+            res_obj = responses_obj.get(
+                str(response.status_code), responses_obj.get('default'))
+            if res_obj is None:
+                raise HTTPInternalServerError('invalid response status code')
+            content_prop = res_obj.get('content')
+            has_content = content_prop and len(content_prop.keys()) > 0
+            if not has_content and response.has_body:
+                raise HTTPInternalServerError(
+                    'invalid response: body must be empty')
+            if response.content_type == MIME_JSON:
+                res_schema = content_prop.get(MIME_JSON, {}).get('schema')
+                if res_schema:
+                    res_json = json.loads(response.body)
+                    try:
+                        _validate(res_schema, res_json)
+                    except Exception as e:
+                        raise HTTPInternalServerError(str(e))
         return response
     return validator_tween
 
@@ -94,7 +118,7 @@ def _validate_and_parse(request, path_matches, op_obj):
         accept_types = set(reqbody.get('content', {}).keys())
         if not accept_types or request.content_type not in accept_types:
             raise HTTPNotAcceptable
-        media_type_obj = reqbody.get('content', {}).get('application/json')
+        media_type_obj = reqbody.get('content', {}).get(MIME_JSON)
         if media_type_obj is not None:
             required = reqbody.get('required', False)
             body = request.body

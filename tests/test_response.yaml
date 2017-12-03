@@ -1,0 +1,59 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Test
+  license:
+    name: MIT
+servers:
+  - url: http://example.com/v1
+paths:
+  /test_simple:
+    post:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  num:
+                    type: integer
+                  str:
+                    type: string
+                    enum: ['hoge']
+  /test_default:
+    post:
+      responses:
+        default:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  num:
+                    type: integer
+                  str:
+                    type: string
+                    enum: ['hoge']
+  /test_not_json:
+    get:
+      responses:
+        '200':
+          content:
+            text/plain:
+  /test_empty:
+    get:
+      responses:
+        '204':
+          content:
+  /test_empty2:
+    get:
+      responses:
+        '200':
+          content:
+  /test_invalid_status_code:
+    get:
+      responses:
+        '200':
+          content:
+            text/plain:
