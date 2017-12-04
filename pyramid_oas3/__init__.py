@@ -83,7 +83,7 @@ def validation_tween_factory(handler, registry):
             if response.content_type == MIME_JSON:
                 res_schema = content_prop.get(MIME_JSON, {}).get('schema')
                 if res_schema:
-                    res_json = json.loads(response.body)
+                    res_json = json.loads(response.body.decode('utf8'))
                     try:
                         _validate(res_schema, res_json)
                     except Exception as e:
@@ -124,7 +124,7 @@ def _validate_and_parse(request, path_matches, op_obj):
             body = request.body
             if required and not body:
                 raise HTTPBadRequest('json body is required')
-            body = json.loads(body)
+            body = json.loads(body.decode('utf8'))
             json_schema = media_type_obj.get('schema')
             if json_schema:
                 _validate(json_schema, body)

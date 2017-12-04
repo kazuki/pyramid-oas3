@@ -127,7 +127,11 @@ def _convert_string_format(schema, value):
                 tries = ['%Y-%m-%dT%H%M%S%z', '%Y-%m-%dT%H%M%S']
             for pattern in tries:
                 try:
-                    return datetime.datetime.strptime(value, pattern)
+                    ret = datetime.datetime.strptime(value, pattern)
+                    if ret.tzinfo is None:
+                        raise ValueError(
+                            'invalid date-time format. required timezone info')
+                    return ret
                 except Exception:
                     pass
             raise ValueError('invalid date-time format')
