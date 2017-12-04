@@ -11,14 +11,21 @@ def _load_lines(filename):
 
 
 setup(
-    name="pyramid_oas3",
+    name='pyramid_oas3',
     version='0.0.1',
-    description='Validator/Parser for Pyramid WebApp in OpenAPI 3.0',
-    packages=["pyramid_oas3"],
-    author="Kazuki Oikawa",
-    author_email="k@oikw.org",
-    license="MIT",
-    url="http://github.com/kazuki/pyramid-oas3",
+    description='OpenAPI 3.0 Validator for Pyramid',
+    packages=['pyramid_oas3'],
+    author='Kazuki Oikawa',
+    author_email='k@oikw.org',
+    license='MIT',
+    url='http://github.com/kazuki/pyramid-oas3',
+    classifiers=[
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'License :: OSI Approved :: MIT License',
+        'Topic :: Software Development :: Libraries :: Python Modules',
+    ],
     install_requires=_load_lines('requirements.txt'),
     tests_requires=_load_lines('test-requirements.txt'),
     test_suite='nose2.collector.collector',
