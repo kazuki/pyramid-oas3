@@ -2,7 +2,6 @@ def resolve_refs(schema):
     cache = {}
 
     def _resolver(n):
-        print('resolve: {}'.format(n))
         if not n.startswith('#/'):
             raise NotImplementedError(
                 'cannot resolve external reference')  # pragma: no cover
