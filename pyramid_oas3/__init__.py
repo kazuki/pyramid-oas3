@@ -5,7 +5,7 @@ from urllib.parse import parse_qs
 import pyramid
 from pyramid.httpexceptions import (
     HTTPBadRequest, HTTPNotAcceptable,
-    HTTPUnauthorized, HTTPInternalServerError)
+    HTTPUnauthorized, HTTPInternalServerError, HTTPUnprocessableEntity)
 
 from pyramid_oas3.jsonschema import OAS3Validator, Resolver
 from pyramid_oas3.resolve import resolve_refs
@@ -48,6 +48,8 @@ def validation_tween_factory(handler, registry):
         'pyramid_oas3.validate_response', False)
     fill_default = registry.settings.get(
         'pyramid_oas3.fill_by_default', False)
+    raise_422 = registry.settings.get(
+        'pyramid_oas3.raise_422', False)
     paths = schema['paths']
     default_security = schema.get('security', None)
     route_mapper = registry.queryUtility(IRoutesMapper)
@@ -68,8 +70,13 @@ def validation_tween_factory(handler, registry):
             return handler(request)
 
         _check_security(default_security, request, op_obj)
-        params, body = _validate_and_parse(
-            Validator, request, route_info.get('match', {}), op_obj)
+        try:
+            params, body = _validate_and_parse(
+                Validator, request, route_info.get('match', {}), op_obj)
+        except HTTPBadRequest as e:
+            if raise_422:
+                raise HTTPUnprocessableEntity(str(e)) from e
+            raise
 
         def oas3_data(_):
             return params
