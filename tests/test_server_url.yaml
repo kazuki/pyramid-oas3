@@ -1,0 +1,21 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Test
+  license:
+    name: MIT
+servers:
+  - url: http://example.com/v1
+paths:
+  /test:
+    get:
+      parameters:
+        - name: p
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            text/plain:

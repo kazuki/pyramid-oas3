@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, urlparse
 
 import pyramid
 from pyramid.httpexceptions import (
@@ -53,19 +53,31 @@ def validation_tween_factory(handler, registry):
     paths = schema['paths']
     default_security = schema.get('security', None)
     route_mapper = registry.queryUtility(IRoutesMapper)
+    prefixes = list(set([
+        urlparse(server['url']).path.rstrip('/')
+        for server in schema.get('servers', [])]))
+    if not prefixes:
+        prefixes = ['/']
 
     def Validator(schema):
         return OAS3Validator(
             schema, resolver=resolver, fill_by_default=fill_default)
+
+    def get_operation_object(path, method):
+        for prefix in prefixes:
+            if not path.startswith(prefix):
+                continue
+            path_item = paths.get(path[len(prefix):])
+            if path_item:
+                return path_item.get(method.lower())
+        return None
 
     def validator_tween(request):
         route_info = route_mapper(request)
         route = route_info.get('route', None)
         if not route:  # pragma: no cover
             return handler(request)
-        path_item = paths.get(route.path)
-        if path_item:
-            op_obj = path_item.get(request.method.lower())
+        op_obj = get_operation_object(route.path, request.method)
         if not op_obj:  # pragma: no cover
             return handler(request)
 
