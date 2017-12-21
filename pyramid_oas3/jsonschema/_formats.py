@@ -1,3 +1,4 @@
+from base64 import b64decode
 import datetime
 from ipaddress import IPv4Address, IPv6Address
 import re
@@ -6,6 +7,24 @@ import rfc3987
 
 
 RE_HOSTNAME = re.compile(r'^[A-Za-z0-9][A-Za-z0-9\.\-]{1,255}$')
+
+
+def int32(v):
+    if isinstance(v, int) and (v < -2**31 or v > 2**31 - 1):
+        raise ValueError('{} is out of int32 range'.format(v))
+    return v
+
+
+def int64(v):
+    if isinstance(v, int) and (v < -2**63 or v > 2**63 - 1):
+        raise ValueError('{} is out of int64 range'.format(v))
+    return v
+
+
+def byte(v):
+    if isinstance(v, str):
+        return b64decode(v)
+    return v
 
 
 def date(v):

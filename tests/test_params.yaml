@@ -50,12 +50,6 @@ paths:
           schema:
             type: string
             format: byte
-        - name: p7
-          in: query
-          required: false
-          schema:
-            type: string
-            format: binary
         - name: p8
           in: query
           required: false

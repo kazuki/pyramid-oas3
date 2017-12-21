@@ -30,7 +30,6 @@ class ParameterTests(unittest.TestCase):
             'p4': 3.141,
             'p5': 2.718,
             'p6': b'\x00Hello\x00',
-            'p7': b'\x01Hello\x01',
             'p8': True,
             'p9': datetime.date(2017, 12, 1),
             'p10': datetime.datetime(
@@ -49,7 +48,6 @@ class ParameterTests(unittest.TestCase):
         }
         q = {k: str(v) for k, v in expected.items()}
         q['p6'] = base64.b64encode(expected['p6'])
-        q['p7'] = expected['p7']
         q['p9'] = expected['p9'].isoformat()
         q['p10'] = expected['p10'].isoformat()
         del q['p11']

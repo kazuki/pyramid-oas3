@@ -9,8 +9,7 @@ from pyramid.httpexceptions import (
 
 from pyramid_oas3.jsonschema import OAS3Validator, Resolver
 from pyramid_oas3.resolve import resolve_refs
-from pyramid_oas3.types import (
-    _convert_type, _convert_string_format, _convert_style)
+from pyramid_oas3.types import _convert_type, _convert_style
 
 
 MIME_JSON = 'application/json'
@@ -185,18 +184,14 @@ def _validate_and_parse_param(
         except Exception as e:
             raise HTTPBadRequest(
                 'invalid value of "{}": {}'.format(name, e))
-        _validate(resolver, schema, value)
-        try:
-            value = _convert_string_format(schema, value)
-        except Exception as e:
-            raise HTTPBadRequest(
-                'invalid format of "{}": {}'.format(name, e))
+        value = _validate(resolver, schema, value)
     return {name: value}
 
 
 def _validate(resolver, schema, instance):
     validator = OAS3Validator(schema, resolver=resolver)
     try:
-        validator.validate(instance)
+        new_instance, _ = validator.validate(instance)
+        return new_instance
     except Exception as e:
         raise HTTPBadRequest(str(e))

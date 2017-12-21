@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-import base64
-import datetime
 from urllib.parse import parse_qsl
 
 
@@ -101,58 +99,3 @@ def _convert_type(schema, value):
         return value
     else:
         raise ValueError('invalid type')  # pragma: no cover
-
-
-def _convert_string_format(schema, value):
-    typ = schema.get('type', 'object')
-    fmt = schema.get('format')
-    if typ == 'string':
-        if fmt is None:
-            return value
-        elif fmt == 'byte':
-            return base64.b64decode(value)
-        elif fmt == 'binary':
-            # TODO(_): UTF8じゃないのは欠落する
-            return value.encode('utf8')
-        elif fmt == 'date':
-            return datetime.datetime.strptime(
-                value, '%Y-%m-%d').date()
-        elif fmt == 'date-time':
-            value = value.replace(':', '')
-            if value[-1] == 'Z':
-                value = value[0:-1] + '+0000'
-            if '.' in value:
-                tries = ['%Y-%m-%dT%H%M%S.%f%z', '%Y-%m-%dT%H%M%S.%f']
-            else:
-                tries = ['%Y-%m-%dT%H%M%S%z', '%Y-%m-%dT%H%M%S']
-            for pattern in tries:
-                try:
-                    ret = datetime.datetime.strptime(value, pattern)
-                    if ret.tzinfo is None:
-                        raise ValueError(
-                            'invalid date-time format. required timezone info')
-                    return ret
-                except Exception:
-                    pass
-            raise ValueError('invalid date-time format')
-        else:
-            raise ValueError('invalid string format')  # pragma: no cover
-    elif typ == 'object':
-        props = schema.get('properties', {})
-        for pn, ps in props.items():
-            if pn in value:
-                value[pn] = _convert_string_format(ps, value[pn])
-        aprops = schema.get('additionalProperties', True)
-        if isinstance(aprops, dict):
-            others = set(value.keys()) - set(props.keys())
-            for k in others:
-                value[k] = _convert_string_format(aprops, value[k])
-        return value
-    elif typ == 'array':
-        item_schema = schema['items']
-        if isinstance(item_schema, dict):
-            for i in range(len(value)):
-                value[i] = _convert_string_format(item_schema, value[i])
-        return value
-    else:
-        return value

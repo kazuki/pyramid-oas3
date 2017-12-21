@@ -45,6 +45,9 @@ class Draft5(FormatChecker):
 class OAS3(FormatChecker):
     def __init__(self):
         super().__init__({
+            'int32': _formats.int32,
+            'int64': _formats.int64,
+            'byte': _formats.byte,
             'date': _formats.date,
             'date-time': _formats.date_time,
             'email': _formats.email,
