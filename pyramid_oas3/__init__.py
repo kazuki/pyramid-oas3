@@ -2,12 +2,12 @@
 import json
 from urllib.parse import parse_qs
 
-from jsonschema import Draft4Validator, draft4_format_checker
 import pyramid
 from pyramid.httpexceptions import (
     HTTPBadRequest, HTTPNotAcceptable,
     HTTPUnauthorized, HTTPInternalServerError)
 
+from pyramid_oas3.jsonschema import OAS3Validator, Resolver
 from pyramid_oas3.resolve import resolve_refs
 from pyramid_oas3.types import (
     _convert_type, _convert_string_format, _convert_style)
@@ -38,6 +38,7 @@ def validation_tween_factory(handler, registry):
     from pyramid.interfaces import IRoutesMapper
 
     schema = registry.settings['pyramid_oas3.schema']
+    resolver = Resolver('', schema)
     validate_response = registry.settings.get(
         'pyramid_oas3.validate_response', False)
     paths = schema['paths']
@@ -57,7 +58,7 @@ def validation_tween_factory(handler, registry):
 
         _check_security(default_security, request, op_obj)
         params, body = _validate_and_parse(
-            request, route_info.get('match', {}), op_obj)
+            resolver, request, route_info.get('match', {}), op_obj)
 
         def oas3_data(_):
             return params
@@ -85,7 +86,7 @@ def validation_tween_factory(handler, registry):
                 if res_schema:
                     res_json = json.loads(response.body.decode('utf8'))
                     try:
-                        _validate(res_schema, res_json)
+                        _validate(resolver, res_schema, res_json)
                     except Exception as e:
                         raise HTTPInternalServerError(str(e))
         return response
@@ -100,7 +101,7 @@ def _check_security(default_security, request, op_obj):
         raise HTTPUnauthorized
 
 
-def _validate_and_parse(request, path_matches, op_obj):
+def _validate_and_parse(resolver, request, path_matches, op_obj):
     params, queries = {}, {}
     if request.query_string:
         try:
@@ -110,7 +111,7 @@ def _validate_and_parse(request, path_matches, op_obj):
             raise HTTPBadRequest('cannot parse query string')
     for param_obj in op_obj.get('parameters', []):
         params.update(_validate_and_parse_param(
-            request, param_obj, path_matches, queries))
+            resolver, request, param_obj, path_matches, queries))
 
     body = None
     reqbody = op_obj.get('requestBody')
@@ -127,11 +128,12 @@ def _validate_and_parse(request, path_matches, op_obj):
             body = json.loads(body.decode('utf8'))
             json_schema = media_type_obj.get('schema')
             if json_schema:
-                _validate(json_schema, body)
+                _validate(resolver, json_schema, body)
     return params, body
 
 
-def _validate_and_parse_param(request, param_obj, path_matches, queries):
+def _validate_and_parse_param(
+        resolver, request, param_obj, path_matches, queries):
     if param_obj.get('allowEmptyValue', False):
         raise NotImplementedError  # pragma: no cover
     in_, name, schema, value = (
@@ -183,7 +185,7 @@ def _validate_and_parse_param(request, param_obj, path_matches, queries):
         except Exception as e:
             raise HTTPBadRequest(
                 'invalid value of "{}": {}'.format(name, e))
-        _validate(schema, value)
+        _validate(resolver, schema, value)
         try:
             value = _convert_string_format(schema, value)
         except Exception as e:
@@ -192,11 +194,9 @@ def _validate_and_parse_param(request, param_obj, path_matches, queries):
     return {name: value}
 
 
-def _validate(schema, instance):
-    validator = Draft4Validator(schema, format_checker=draft4_format_checker)
-    errors = [
-        e.message
-        for e in validator.iter_errors(instance)
-    ]
-    if errors:
-        raise HTTPBadRequest('\r\n\r\n'.join(errors).strip())
+def _validate(resolver, schema, instance):
+    validator = OAS3Validator(schema, resolver=resolver)
+    try:
+        validator.validate(instance)
+    except Exception as e:
+        raise HTTPBadRequest(str(e))
