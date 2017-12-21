@@ -23,9 +23,15 @@ def includeme(config):
     }
     schema = settings['schema']
 
-    # 検証を簡単にするために $ref をすべて解決する。
-    # TODO(_): メモリ効率が著しく悪いので、将来的には $ref のまま処理したい…
-    resolve_refs(schema)
+    # 検証を簡単にするためにパラメータの $ref をすべて解決する。
+    for path, path_item in schema['paths'].items():
+        for method, op_obj in path_item.items():
+            if method not in ('get', 'put', 'post', 'delete', 'options',
+                              'head', 'patch', 'trace'):
+                continue
+            params = op_obj.get('parameters')
+            if params:
+                resolve_refs(params)
 
     config.add_tween(
         "pyramid_oas3.validation_tween_factory",
@@ -40,9 +46,15 @@ def validation_tween_factory(handler, registry):
     resolver = Resolver('', schema)
     validate_response = registry.settings.get(
         'pyramid_oas3.validate_response', False)
+    fill_default = registry.settings.get(
+        'pyramid_oas3.fill_by_default', False)
     paths = schema['paths']
     default_security = schema.get('security', None)
     route_mapper = registry.queryUtility(IRoutesMapper)
+
+    def Validator(schema):
+        return OAS3Validator(
+            schema, resolver=resolver, fill_by_default=fill_default)
 
     def validator_tween(request):
         route_info = route_mapper(request)
@@ -57,7 +69,7 @@ def validation_tween_factory(handler, registry):
 
         _check_security(default_security, request, op_obj)
         params, body = _validate_and_parse(
-            resolver, request, route_info.get('match', {}), op_obj)
+            Validator, request, route_info.get('match', {}), op_obj)
 
         def oas3_data(_):
             return params
@@ -85,7 +97,7 @@ def validation_tween_factory(handler, registry):
                 if res_schema:
                     res_json = json.loads(response.body.decode('utf8'))
                     try:
-                        _validate(resolver, res_schema, res_json)
+                        _validate(Validator, res_schema, res_json)
                     except Exception as e:
                         raise HTTPInternalServerError(str(e))
         return response
@@ -100,7 +112,7 @@ def _check_security(default_security, request, op_obj):
         raise HTTPUnauthorized
 
 
-def _validate_and_parse(resolver, request, path_matches, op_obj):
+def _validate_and_parse(Validator, request, path_matches, op_obj):
     params, queries = {}, {}
     if request.query_string:
         try:
@@ -110,7 +122,7 @@ def _validate_and_parse(resolver, request, path_matches, op_obj):
             raise HTTPBadRequest('cannot parse query string')
     for param_obj in op_obj.get('parameters', []):
         params.update(_validate_and_parse_param(
-            resolver, request, param_obj, path_matches, queries))
+            Validator, request, param_obj, path_matches, queries))
 
     body = None
     reqbody = op_obj.get('requestBody')
@@ -127,12 +139,12 @@ def _validate_and_parse(resolver, request, path_matches, op_obj):
             body = json.loads(body.decode('utf8'))
             json_schema = media_type_obj.get('schema')
             if json_schema:
-                _validate(resolver, json_schema, body)
+                body = _validate(Validator, json_schema, body)
     return params, body
 
 
 def _validate_and_parse_param(
-        resolver, request, param_obj, path_matches, queries):
+        Validator, request, param_obj, path_matches, queries):
     if param_obj.get('allowEmptyValue', False):
         raise NotImplementedError  # pragma: no cover
     in_, name, schema, value = (
@@ -184,12 +196,12 @@ def _validate_and_parse_param(
         except Exception as e:
             raise HTTPBadRequest(
                 'invalid value of "{}": {}'.format(name, e))
-        value = _validate(resolver, schema, value)
+        value = _validate(Validator, schema, value)
     return {name: value}
 
 
-def _validate(resolver, schema, instance):
-    validator = OAS3Validator(schema, resolver=resolver)
+def _validate(Validator, schema, instance):
+    validator = Validator(schema)
     try:
         new_instance, _ = validator.validate(instance)
         return new_instance
