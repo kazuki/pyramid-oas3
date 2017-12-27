@@ -16,23 +16,6 @@ MIME_JSON = 'application/json'
 
 
 def includeme(config):
-    settings = {
-        k[13:]: v
-        for k, v in config.registry.settings.items()
-        if k.startswith('pyramid_oas3.')
-    }
-    schema = settings['schema']
-
-    # 検証を簡単にするためにパラメータの $ref をすべて解決する。
-    for path, path_item in schema['paths'].items():
-        for method, op_obj in path_item.items():
-            if method not in ('get', 'put', 'post', 'delete', 'options',
-                              'head', 'patch', 'trace'):
-                continue
-            params = op_obj.get('parameters')
-            if params:
-                resolve_refs(params)
-
     config.add_tween(
         "pyramid_oas3.validation_tween_factory",
         under=pyramid.tweens.EXCVIEW
@@ -41,16 +24,15 @@ def includeme(config):
 
 def validation_tween_factory(handler, registry):
     from pyramid.interfaces import IRoutesMapper
-
-    schema = registry.settings['pyramid_oas3.schema']
+    settings = {
+        k[13:]: v
+        for k, v in registry.settings.items()
+        if k.startswith('pyramid_oas3.')}
+    validate_response = settings.get('validate_response', False)
+    fill_default = settings.get('fill_by_default', False)
+    raise_422 = settings.get('raise_422', False)
+    schema = settings['schema']
     resolver = Resolver('', schema)
-    validate_response = registry.settings.get(
-        'pyramid_oas3.validate_response', False)
-    fill_default = registry.settings.get(
-        'pyramid_oas3.fill_by_default', False)
-    raise_422 = registry.settings.get(
-        'pyramid_oas3.raise_422', False)
-    paths = schema['paths']
     default_security = schema.get('security', None)
     route_mapper = registry.queryUtility(IRoutesMapper)
     prefixes = list(set([
@@ -58,6 +40,17 @@ def validation_tween_factory(handler, registry):
         for server in schema.get('servers', [])]))
     if not prefixes:
         prefixes = ['/']
+
+    # 検証を簡単にするためにパラメータの $ref をすべて解決する。
+    paths = schema['paths']
+    for path, path_item in paths.items():
+        for method, op_obj in path_item.items():
+            if method not in ('get', 'put', 'post', 'delete', 'options',
+                              'head', 'patch', 'trace'):
+                continue
+            params = op_obj.get('parameters')
+            if params:
+                resolve_refs(params, resolver)
 
     def Validator(schema):
         return OAS3Validator(
