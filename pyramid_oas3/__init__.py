@@ -79,7 +79,8 @@ def validation_tween_factory(handler, registry):
         _check_security(default_security, request, op_obj)
         try:
             params, body = _validate_and_parse(
-                Validator, request, route_info.get('match', {}), op_obj)
+                Validator, resolver, request, route_info.get('match', {}),
+                op_obj)
         except HTTPBadRequest as e:
             if raise_422:
                 raise HTTPUnprocessableEntity(str(e)) from e
@@ -126,7 +127,7 @@ def _check_security(default_security, request, op_obj):
         raise HTTPUnauthorized
 
 
-def _validate_and_parse(Validator, request, path_matches, op_obj):
+def _validate_and_parse(Validator, resolver, request, path_matches, op_obj):
     params, queries = {}, {}
     if request.query_string:
         try:
@@ -141,6 +142,8 @@ def _validate_and_parse(Validator, request, path_matches, op_obj):
     body = None
     reqbody = op_obj.get('requestBody')
     if reqbody:
+        if '$ref' in reqbody:
+            _, reqbody = resolver.resolve(reqbody['$ref'])
         accept_types = set(reqbody.get('content', {}).keys())
         if not accept_types or request.content_type not in accept_types:
             raise HTTPNotAcceptable
