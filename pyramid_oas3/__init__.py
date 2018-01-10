@@ -57,6 +57,8 @@ def validation_tween_factory(handler, registry):
             schema, resolver=resolver, fill_by_default=fill_default)
 
     def get_operation_object(path, method):
+        if path and path[0] != '/':
+            path = '/' + path
         for prefix in prefixes:
             if not path.startswith(prefix):
                 continue
