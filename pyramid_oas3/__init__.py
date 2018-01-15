@@ -80,7 +80,7 @@ def validation_tween_factory(handler, registry):
         try:
             params, body = _validate_and_parse(
                 Validator, resolver, request, route_info.get('match', {}),
-                op_obj)
+                op_obj, fill_default)
         except HTTPBadRequest as e:
             if raise_422:
                 raise HTTPUnprocessableEntity(str(e)) from e
@@ -127,7 +127,8 @@ def _check_security(default_security, request, op_obj):
         raise HTTPUnauthorized
 
 
-def _validate_and_parse(Validator, resolver, request, path_matches, op_obj):
+def _validate_and_parse(
+        Validator, resolver, request, path_matches, op_obj, fill_by_default):
     params, queries = {}, {}
     if request.query_string:
         try:
@@ -137,7 +138,8 @@ def _validate_and_parse(Validator, resolver, request, path_matches, op_obj):
             raise HTTPBadRequest('cannot parse query string')
     for param_obj in op_obj.get('parameters', []):
         params.update(_validate_and_parse_param(
-            Validator, request, param_obj, path_matches, queries))
+            Validator, request, param_obj, path_matches, queries,
+            fill_by_default))
 
     body = None
     reqbody = op_obj.get('requestBody')
@@ -161,7 +163,7 @@ def _validate_and_parse(Validator, resolver, request, path_matches, op_obj):
 
 
 def _validate_and_parse_param(
-        Validator, request, param_obj, path_matches, queries):
+        Validator, request, param_obj, path_matches, queries, fill_by_default):
     if param_obj.get('allowEmptyValue', False):
         raise NotImplementedError  # pragma: no cover
     in_, name, schema, value = (
@@ -191,6 +193,8 @@ def _validate_and_parse_param(
                 value = queries[name]
                 if not (style == 'form' and explode and typ == 'array'):
                     value = value[0]
+            elif schema and fill_by_default and 'default' in schema:
+                return {name: schema['default']}
     elif in_ == 'header' and name in request.headers:
         value = request.headers[name]
     elif in_ == 'cookie':  # pragma: no cover

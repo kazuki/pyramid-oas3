@@ -212,3 +212,34 @@ paths:
         '200':
           content:
             text/plain:
+  /test_fill:
+    get:
+      parameters:
+        - name: p0
+          in: query
+          schema:
+            type: integer
+            format: int32
+            default: 1
+        - name: p1
+          in: query
+          schema:
+            type: string
+            default: 'hello'
+        - name: p2
+          in: query
+          schema:
+            type: string
+            format: date
+            default: 2018-01-01
+        - name: p3
+          in: query
+          schema:
+            type: string
+            format: date-time
+            default: 2018-01-02T03:04:05Z
+        - name: p4
+          in: query
+          schema:
+            type: boolean
+            default: false

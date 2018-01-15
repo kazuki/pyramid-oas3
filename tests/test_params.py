@@ -15,7 +15,8 @@ class ParameterTests(unittest.TestCase):
                 '/test_required',
                 '/path_test/{d0}/{d1}/{d2}/{d3}/{d4}',
                 '/test_invalid',
-            ])
+                '/test_fill',
+            ], settings={'pyramid_oas3.fill_by_default': True})
 
     def _get(self, url, **kwargs):
         return pickle.loads(base64.b64decode(
@@ -138,3 +139,15 @@ class ParameterTests(unittest.TestCase):
         _200('p7', 'foo')
         _400('p7', 'hoge')
         _400('&', '')  # query-string parse error
+
+    def test_fill(self):
+        expected = {
+            'p0': 1, 'p1': 'hello', 'p2': datetime.date(2018, 1, 1),
+            'p3': datetime.datetime(
+                2018, 1, 2, 3, 4, 5, tzinfo=datetime.timezone.utc),
+            'p4': False}
+        actual = self._get('/test_fill', status=200)
+        # TODO: PyYAMLがdate-timeのパース時にtzinfoを考慮しない
+        actual.pop('p3')
+        expected.pop('p3')
+        self.assertEqual(actual, expected)
