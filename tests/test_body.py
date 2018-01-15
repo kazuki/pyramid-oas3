@@ -14,6 +14,8 @@ class BodyTests(unittest.TestCase):
                 '/test_fill_default',
                 '/test_fill_default_oneOf',
                 '/test_binary',
+                '/test_fill_ref',
+                '/test_fill_dict_ref',
             ], settings={'pyramid_oas3.fill_by_default': True})
 
     def _post(self, url, body, **kwargs):
@@ -58,3 +60,14 @@ class BodyTests(unittest.TestCase):
         self.app.post('/test_binary', upload_files=[
             ('hoge', 'dummy', b'hello world')
         ])
+
+    def test_fill_ref(self):
+        m0, m1 = {}, {'foo': 'bar', 'hoge': 'hoge-default-value'}
+        self.assertEqual(m1, self._post(
+            '/test_fill_ref', m0, status=200))
+
+    def test_fill_dict_ref(self):
+        tmp = {'foo': 'bar', 'hoge': 'hoge-default-value'}
+        m0, m1 = {'required': {}}, {'required': tmp, 'filled': tmp}
+        self.assertEqual(m1, self._post(
+            '/test_fill_dict_ref', m0, status=200))

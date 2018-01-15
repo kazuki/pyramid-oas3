@@ -88,3 +88,55 @@ paths:
         content:
           application/octet-stream:
           multipart/form-data:
+  /test_fill_ref:
+    post:
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              type: object
+              properties:
+                foo:
+                  type: string
+                  default: bar
+                hoge:
+                  $ref: '#/components/schemas/Hoge'
+  /test_fill_dict_ref:
+    post:
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              type: object
+              properties:
+                required:
+                  $ref: '#/components/schemas/TestFillDictRef'
+                filled:
+                  $ref: '#/components/schemas/TestFillDictRef'
+                not_filled:
+                  $ref: '#/components/schemas/TestFillDictRefWODefault'
+              required: ['required']
+components:
+  schemas:
+    TestFillDictRef:
+      type: object
+      properties:
+        foo:
+          type: string
+          default: bar
+        hoge:
+          $ref: '#/components/schemas/Hoge'
+      default: {}
+    TestFillDictRefWODefault:
+      type: object
+      properties:
+        foo:
+          type: string
+          default: bar
+        hoge:
+          $ref: '#/components/schemas/Hoge'
+    Hoge:
+      type: string
+      default: hoge-default-value

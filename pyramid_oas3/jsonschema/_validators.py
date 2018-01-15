@@ -45,10 +45,21 @@ def properties(validator, properties, instance, schema, errors):
     new_instance = dict(instance)
     for property, subschema in properties.items():
         if property not in instance:
+            ref_value = subschema.get('$ref')
+            if ref_value:
+                _, subschema = validator.resolver.resolve(ref_value)
             if validator._fill_by_default and 'default' in subschema:
-                new_instance[property] = subschema['default']
-            new_schema[property] = subschema
-            continue
+                if isinstance(subschema['default'], (dict, list)):
+                    instance[property] = subschema['default']
+                else:
+                    # dict/list以外の場合はformatで型が変わっている可能性があるので
+                    # default値を信頼してvalidationは実施しない
+                    new_instance[property] = subschema['default']
+                    new_schema[property] = subschema
+                    continue
+            else:
+                new_schema[property] = subschema
+                continue
         new_instance[property], new_schema[property] = validator._descend(
             instance[property], subschema, errors, path=property,
             schema_path=property)
