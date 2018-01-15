@@ -1,6 +1,6 @@
 import unittest
 
-from common import create_webapp
+from .common import create_webapp
 
 
 class Raise422Tests(unittest.TestCase):

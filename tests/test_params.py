@@ -4,7 +4,7 @@ import pickle
 import unittest
 from urllib.parse import quote_plus, quote_from_bytes
 
-from common import create_webapp
+from .common import create_webapp
 
 
 class ParameterTests(unittest.TestCase):

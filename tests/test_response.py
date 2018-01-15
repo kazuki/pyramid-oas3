@@ -4,7 +4,7 @@ import unittest
 from nose2.tools import params
 from pyramid.response import Response
 
-from common import create_webapp
+from .common import create_webapp
 
 
 class ResponseTests(unittest.TestCase):

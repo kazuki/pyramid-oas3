@@ -1,7 +1,7 @@
 import unittest
 from nose2.tools import params
 
-from common import create_webapp
+from .common import create_webapp
 
 
 def _setup_auth(config):

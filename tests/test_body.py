@@ -3,7 +3,7 @@ from datetime import date, datetime, timezone
 import pickle
 import unittest
 
-from common import create_webapp
+from .common import create_webapp
 
 
 class BodyTests(unittest.TestCase):
