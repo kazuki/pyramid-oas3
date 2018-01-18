@@ -45,8 +45,8 @@ class ResponseTests(unittest.TestCase):
     def test_simple(self, typ):
         path = '/test_{}'.format(typ)
         self._post(path, {'num': 123, 'str': 'hoge'}, status=200)
-        self._post(path, {'num': 123, 'str': 'test'}, status=500)
-        self._post(path, {'num': 'test'}, status=500)
+        self._post(path, {'num': 123, 'str': 'test'}, status=400)
+        self._post(path, {'num': 'test'}, status=400)
 
     def test_not_json(self):
         self.app.get('/test_not_json', status=200)

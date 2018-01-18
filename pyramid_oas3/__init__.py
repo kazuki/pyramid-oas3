@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
+from contextlib import contextmanager
 import json
 from urllib.parse import parse_qs, urlparse
 
 import pyramid
 from pyramid.httpexceptions import (
-    HTTPBadRequest, HTTPNotAcceptable,
-    HTTPUnauthorized, HTTPInternalServerError, HTTPUnprocessableEntity)
+    HTTPBadRequest, HTTPNotAcceptable, HTTPUnauthorized,
+    HTTPInternalServerError)
 
 from pyramid_oas3.jsonschema import OAS3Validator, Resolver
 from pyramid_oas3.resolve import resolve_refs
@@ -30,7 +31,6 @@ def validation_tween_factory(handler, registry):
         if k.startswith('pyramid_oas3.')}
     validate_response = settings.get('validate_response', False)
     fill_default = settings.get('fill_by_default', False)
-    raise_422 = settings.get('raise_422', False)
     schema = settings['schema']
     resolver = Resolver('', schema)
     default_security = schema.get('security', None)
@@ -40,6 +40,8 @@ def validation_tween_factory(handler, registry):
         for server in schema.get('servers', [])]))
     if not prefixes:
         prefixes = ['/']
+
+    validation_context = __get_validation_context(settings)
 
     # 検証を簡単にするためにパラメータの $ref をすべて解決する。
     paths = schema['paths']
@@ -76,15 +78,11 @@ def validation_tween_factory(handler, registry):
         if not op_obj:  # pragma: no cover
             return handler(request)
 
-        _check_security(default_security, request, op_obj)
-        try:
+        with validation_context(request):
+            _check_security(default_security, request, op_obj)
             params, body = _validate_and_parse(
                 Validator, resolver, request, route_info.get('match', {}),
                 op_obj, fill_default)
-        except HTTPBadRequest as e:
-            if raise_422:
-                raise HTTPUnprocessableEntity(str(e)) from e
-            raise
 
         def oas3_data(_):
             return params
@@ -96,7 +94,10 @@ def validation_tween_factory(handler, registry):
         request.set_property(oas3_body)
         response = handler(request)
 
-        if validate_response:
+        if not validate_response:
+            return response
+
+        with validation_context(request, response=response):
             responses_obj = op_obj['responses']
             res_obj = responses_obj.get(
                 str(response.status_code), responses_obj.get('default'))
@@ -111,11 +112,8 @@ def validation_tween_factory(handler, registry):
                 res_schema = content_prop.get(MIME_JSON, {}).get('schema')
                 if res_schema:
                     res_json = json.loads(response.body.decode('utf8'))
-                    try:
-                        _validate(Validator, res_schema, res_json)
-                    except Exception as e:
-                        raise HTTPInternalServerError(str(e))
-        return response
+                    _validate(Validator, res_schema, res_json)
+            return response
     return validator_tween
 
 
@@ -125,6 +123,22 @@ def _check_security(default_security, request, op_obj):
         return
     if request.authenticated_userid is None:
         raise HTTPUnauthorized
+
+
+@contextmanager
+def __noop_context(request, response=None):
+    yield
+
+
+def __get_validation_context(settings):
+    validation_context_path = settings.get(
+        'pyramid_oas3.validation_context_path')
+    if not validation_context_path:
+        return __noop_context
+    import re
+    m = re.match(r'(?P<path>.*)\.(?P<name>.*)', validation_context_path)
+    return getattr(__import__(
+        m.group('path'), fromlist=m.group('name')), m.group('name'))
 
 
 def _validate_and_parse(

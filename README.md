@@ -10,6 +10,6 @@ pyramid_oas3
 設定項目
 --------
 
-* pyramid_oas3.validate_response: [bool] レスポンスのJSONも検証するかを設定します
-* pyramid_oas3.fill_by_default: [bool] リクエストデータに対してOpenAPI定義で設定されたdefault値で埋めるかを設定します
-* pyramid_oas3.raise_422: [bool] 検証エラーの時にHTTP400の代わりにHTTP422を返却するようにします
+* pyramid_oas3.validate_response[bool]: レスポンスのJSONも検証するかを設定します
+* pyramid_oas3.fill_by_default[bool]: リクエストデータに対してOpenAPI定義で設定されたdefault値で埋めるかを設定します
+* pyramid_oas3.validation_context_path[str]: スキーマ検証エラー発生時に任意の処理を行なう関数を設定します
