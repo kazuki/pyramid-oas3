@@ -2,24 +2,17 @@
 import json
 from urllib.parse import parse_qs, urlparse
 
-import pyramid
 from pyramid.httpexceptions import (
-    HTTPBadRequest, HTTPNotAcceptable,
-    HTTPUnauthorized, HTTPInternalServerError, HTTPUnprocessableEntity)
+    HTTPBadRequest, HTTPNotAcceptable, HTTPUnauthorized)
 
 from pyramid_oas3.jsonschema import OAS3Validator, Resolver
+from pyramid_oas3.jsonschema.exceptions import (
+    ValidationErrors, ValidationError, StyleError)
 from pyramid_oas3.resolve import resolve_refs
 from pyramid_oas3.types import _convert_type, _convert_style
 
 
 MIME_JSON = 'application/json'
-
-
-def includeme(config):
-    config.add_tween(
-        "pyramid_oas3.validation_tween_factory",
-        under=pyramid.tweens.EXCVIEW
-    )
 
 
 def validation_tween_factory(handler, registry):
@@ -30,7 +23,6 @@ def validation_tween_factory(handler, registry):
         if k.startswith('pyramid_oas3.')}
     validate_response = settings.get('validate_response', False)
     fill_default = settings.get('fill_by_default', False)
-    raise_422 = settings.get('raise_422', False)
     schema = settings['schema']
     resolver = Resolver('', schema)
     default_security = schema.get('security', None)
@@ -77,14 +69,9 @@ def validation_tween_factory(handler, registry):
             return handler(request)
 
         _check_security(default_security, request, op_obj)
-        try:
-            params, body = _validate_and_parse(
-                Validator, resolver, request, route_info.get('match', {}),
-                op_obj, fill_default)
-        except HTTPBadRequest as e:
-            if raise_422:
-                raise HTTPUnprocessableEntity(str(e)) from e
-            raise
+        params, body = _validate_and_parse(
+            Validator, resolver, request, route_info.get('match', {}),
+            op_obj, fill_default)
 
         def oas3_data(_):
             return params
@@ -95,26 +82,28 @@ def validation_tween_factory(handler, registry):
         request.set_property(oas3_data)
         request.set_property(oas3_body)
         response = handler(request)
+        if not validate_response:
+            return response
 
-        if validate_response:
+        try:
             responses_obj = op_obj['responses']
             res_obj = responses_obj.get(
                 str(response.status_code), responses_obj.get('default'))
             if res_obj is None:
-                raise HTTPInternalServerError('invalid response status code')
+                raise ValidationErrors(ValidationError(
+                    'invalid response status code'))
             content_prop = res_obj.get('content')
             has_content = content_prop and len(content_prop.keys()) > 0
             if not has_content and response.has_body:
-                raise HTTPInternalServerError(
-                    'invalid response: body must be empty')
+                raise ValidationErrors(ValidationError(
+                    'invalid response: body must be empty'))
             if response.content_type == MIME_JSON:
                 res_schema = content_prop.get(MIME_JSON, {}).get('schema')
                 if res_schema:
                     res_json = json.loads(response.body.decode('utf8'))
-                    try:
-                        _validate(Validator, res_schema, res_json)
-                    except Exception as e:
-                        raise HTTPInternalServerError(str(e))
+                    _validate(Validator, res_schema, res_json)
+        except Exception as e:
+            raise ResponseValidationError(response, e)
         return response
     return validator_tween
 
@@ -154,7 +143,8 @@ def _validate_and_parse(
             required = reqbody.get('required', False)
             body = request.body
             if required and not body:
-                raise HTTPBadRequest('json body is required')
+                raise ValidationErrors(ValidationError(
+                    'json body is required'))
             body = json.loads(body.decode('utf8'))
             json_schema = media_type_obj.get('schema')
             if json_schema:
@@ -200,8 +190,8 @@ def _validate_and_parse_param(
     elif in_ == 'cookie':  # pragma: no cover
         raise NotImplementedError
     if param_obj.get('required', False) and value is None:
-        raise HTTPBadRequest(
-            'required parameter "{}" is not found in {}'.format(name, in_))
+        raise ValidationErrors(ValidationError(
+            'required parameter "{}" is not found in {}'.format(name, in_)))
     if value is None:
         return {}
 
@@ -209,22 +199,25 @@ def _validate_and_parse_param(
         try:
             value = _convert_style(style, explode, typ, value)
         except Exception as e:
-            raise HTTPBadRequest(
-                'invalid style of "{}": {}'.format(name, e))
+            raise ValidationErrors(StyleError(
+                'invalid style of "{}": {}'.format(name, e)))
     if schema:
         try:
             value = _convert_type(schema, value)
         except Exception as e:
-            raise HTTPBadRequest(
-                'invalid value of "{}": {}'.format(name, e))
+            raise ValidationErrors(ValueError(
+                'invalid value of "{}": {}'.format(name, e)))
         value = _validate(Validator, schema, value)
     return {name: value}
 
 
 def _validate(Validator, schema, instance):
     validator = Validator(schema)
-    try:
-        new_instance, _ = validator.validate(instance)
-        return new_instance
-    except Exception as e:
-        raise HTTPBadRequest(str(e))
+    new_instance, _ = validator.validate(instance)
+    return new_instance
+
+
+class ResponseValidationError(Exception):
+    def __init__(self, response, exception):
+        self.response = response
+        self.exception = exception

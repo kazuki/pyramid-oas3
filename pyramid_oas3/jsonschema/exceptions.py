@@ -129,8 +129,14 @@ class FormatError(Exception):
         return self.message
 
 
+class StyleError(FormatError):
+    pass
+
+
 class ValidationErrors(Exception):
     def __init__(self, errors):
+        if isinstance(errors, Exception):
+            errors = [errors]
         self.errors = errors
 
     def __str__(self):

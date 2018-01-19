@@ -4,7 +4,10 @@ import pickle
 
 from pyramid.config import Configurator
 from pyramid.response import Response
+from pyramid.view import exception_view_config
 from webtest import TestApp
+
+from pyramid_oas3 import ValidationErrors, ResponseValidationError
 
 
 def create_webapp(schema_name, patterns, func=None, settings=None):
@@ -29,4 +32,19 @@ def create_webapp(schema_name, patterns, func=None, settings=None):
             config.add_view(test, route_name=name)
         if func:
             func(config)
+        config.scan()
         return TestApp(config.make_wsgi_app())
+
+
+@exception_view_config(ValidationErrors)
+def failed_request_validation(exc, request):
+    res = Response(str(exc))
+    res.status_int = 400
+    return res
+
+
+@exception_view_config(ResponseValidationError)
+def failed_response_validation(exc, request):
+    res = Response(str(exc))
+    res.status_int = 500
+    return res
