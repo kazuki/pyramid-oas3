@@ -3,7 +3,8 @@ from datetime import date, datetime, timezone
 import pickle
 import unittest
 
-from .common import create_webapp
+from pyramid_oas3 import ValidationErrors
+from .common import create_webapp, get_last_exception
 
 
 class BodyTests(unittest.TestCase):
@@ -16,6 +17,7 @@ class BodyTests(unittest.TestCase):
                 '/test_binary',
                 '/test_fill_ref',
                 '/test_fill_dict_ref',
+                '/test_oneOf_error',
             ], settings={'pyramid_oas3.fill_by_default': True})
 
     def _post(self, url, body, **kwargs):
@@ -73,3 +75,13 @@ class BodyTests(unittest.TestCase):
         m0, m1 = {'required': {}}, {'required': tmp, 'filled': tmp}
         self.assertEqual(m1, self._post(
             '/test_fill_dict_ref', m0, status=200))
+
+    def test_oneOf_error(self):
+        self._post('/test_oneOf_error', 123, status=400)
+        exc = get_last_exception()
+        self.assertIsInstance(exc, ValidationErrors)
+        self.assertIsInstance(exc.errors, list)
+        self.assertEqual(len(exc.errors), 1)
+        messages = sorted([str(e) for e in exc.errors[0].context])
+        self.assertIn('not of type array', messages[0])
+        self.assertIn('not of type object', messages[1])

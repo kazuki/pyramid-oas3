@@ -122,6 +122,22 @@ paths:
                 not_filled:
                   $ref: '#/components/schemas/TestFillDictRefWODefault'
               required: ['required']
+  /test_oneOf_error:
+    post:
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              oneOf:
+                - type: object
+                  required: ['required']
+                  properties:
+                    required:
+                      type: string
+                - type: array
+                  items:
+                    type: string
 components:
   schemas:
     TestFillDictRef:
