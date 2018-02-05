@@ -102,6 +102,10 @@ paths:
                   default: bar
                 hoge:
                   $ref: '#/components/schemas/Hoge'
+                hoge2:
+                  allOf:
+                    - $ref: '#/components/schemas/Hoge2'
+                    - default: hoge2-value
   /test_fill_dict_ref:
     post:
       requestBody:
@@ -140,3 +144,5 @@ components:
     Hoge:
       type: string
       default: hoge-default-value
+    Hoge2:
+      type: string

@@ -46,16 +46,15 @@ def properties(validator, properties, instance, schema, errors):
     for property, subschema in properties.items():
         prop_value = instance.get(property)
         if prop_value is None:
-            ref_value = subschema.get('$ref')
-            if ref_value:
-                _, subschema = validator.resolver.resolve(ref_value)
-            if validator._fill_by_default and 'default' in subschema:
-                if isinstance(subschema['default'], (dict, list)):
-                    prop_value = subschema['default']
+            filled, default_value = _try_get_default_value(
+                validator, subschema)
+            if filled:
+                if isinstance(default_value, (dict, list)):
+                    prop_value = default_value
                 else:
                     # dict/list以外の場合はformatで型が変わっている可能性があるので
                     # default値を信頼してvalidationは実施しない
-                    new_instance[property] = subschema['default']
+                    new_instance[property] = default_value
                     new_schema[property] = subschema
                     continue
             else:
@@ -64,6 +63,30 @@ def properties(validator, properties, instance, schema, errors):
         new_instance[property], new_schema[property] = validator._descend(
             prop_value, subschema, errors, path=property, schema_path=property)
     return new_instance, new_schema
+
+
+def _try_get_default_value(validator, subschema):
+    if not validator._fill_by_default or not isinstance(subschema, dict):
+        return False, None
+    ref_value = subschema.get('$ref')
+    if ref_value:
+        scope, subschema = validator.resolver.resolve(ref_value)
+        validator.resolver.push_scope(scope)
+    try:
+        if 'default' in subschema:
+            return True, subschema['default']
+        if 'allOf' in subschema:
+            ret = []
+            for s in subschema['allOf']:
+                filled, value = _try_get_default_value(validator, s)
+                if filled:
+                    ret.append(value)
+            if len(ret) == 1:
+                return True, ret[0]
+    finally:
+        if ref_value:
+            validator.resolver.pop_scope()
+    return False, None
 
 
 def format(validator, format, instance, schema, errors):

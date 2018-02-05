@@ -62,7 +62,9 @@ class BodyTests(unittest.TestCase):
         ])
 
     def test_fill_ref(self):
-        m0, m1 = {}, {'foo': 'bar', 'hoge': 'hoge-default-value'}
+        m0, m1 = {}, {
+            'foo': 'bar', 'hoge': 'hoge-default-value',
+            'hoge2': 'hoge2-value'}
         self.assertEqual(m1, self._post(
             '/test_fill_ref', m0, status=200))
 
