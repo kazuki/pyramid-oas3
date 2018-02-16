@@ -12,7 +12,7 @@ def _load_lines(filename):
 
 setup(
     name='pyramid_oas3',
-    version='0.0.9',
+    version='0.0.10',
     description='OpenAPI 3.0 Validator for Pyramid',
     packages=['pyramid_oas3', 'pyramid_oas3.jsonschema'],
     author='Kazuki Oikawa',
