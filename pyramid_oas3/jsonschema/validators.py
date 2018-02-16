@@ -92,6 +92,8 @@ class _Validator(object):
             raise UnknownTypeError(typ, instance, schema)
         if isinstance(instance, bool) and issubclass(int, pytype):
             return False
+        if instance is None and schema.get('nullable', False):
+            return True
         return isinstance(instance, pytype)
 
 
