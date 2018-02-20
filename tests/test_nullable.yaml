@@ -1,0 +1,29 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Test
+  license:
+    name: MIT
+servers:
+  - url: http://example.com/
+paths:
+  /test_00:
+    post:
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              type: object
+              properties:
+                int-array?:
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 1
+                    nullable: true
+                  default:
+                    - null
+                    - 1
+                    - 2
+                    - 3

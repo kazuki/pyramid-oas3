@@ -44,6 +44,9 @@ class _Validator(object):
                 validator = self._validators.get(k)
                 if validator is None:
                     continue
+                if ref is None and self._is_nullable_and_skip_validation(
+                        instance, schema):
+                    continue
                 ret = validator(self, v, instance, schema, errors)
                 if ret is None:
                     tmp_instance, tmp_schema = instance, v
@@ -92,9 +95,12 @@ class _Validator(object):
             raise UnknownTypeError(typ, instance, schema)
         if isinstance(instance, bool) and issubclass(int, pytype):
             return False
-        if instance is None and schema.get('nullable', False):
-            return True
         return isinstance(instance, pytype)
+
+    def _is_nullable_and_skip_validation(self, instance, schema):
+        if instance is not None:
+            return False
+        return schema.get('nullable', False)
 
 
 class Draft4(_Validator):
