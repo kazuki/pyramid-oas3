@@ -302,7 +302,12 @@ def uniqueItems(validator, uI, instance, schema, errors):
 
 
 def not_(validator, not_, instance, schema, errors):
-    raise NotImplementedError
+    tmp_errors = []
+    validator._descend(instance, not_, tmp_errors)
+    if len(tmp_errors) != 0:
+        return
+    errors.append(ValidationError(
+        '{} is not allowed for {}'.format(not_, instance)))
 
 
 def dependencies(validator, deps, instance, schema, errors):

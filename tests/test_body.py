@@ -18,6 +18,8 @@ class BodyTests(unittest.TestCase):
                 '/test_fill_ref',
                 '/test_fill_dict_ref',
                 '/test_oneOf_error',
+                '/test_not0',
+                '/test_not1',
             ], settings={'pyramid_oas3.fill_by_default': True})
 
     def _post(self, url, body, **kwargs):
@@ -85,3 +87,11 @@ class BodyTests(unittest.TestCase):
         messages = sorted([str(e) for e in exc.errors[0].context])
         self.assertIn('not of type array', messages[0])
         self.assertIn('not of type object', messages[1])
+
+    def test_not(self):
+        self._post('/test_not0', 123)
+        self._post('/test_not0', 'hello', status=400)
+        self._post('/test_not1', 'ok')
+        self._post('/test_not1', 'hello', status=400)
+        self._post('/test_not1', 123, status=400)
+        self._post('/test_not1', {}, status=400)

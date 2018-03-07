@@ -138,6 +138,26 @@ paths:
                 - type: array
                   items:
                     type: string
+  /test_not0:
+    post:
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              not:
+                type: string
+  /test_not1:
+    post:
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              allOf:
+                - type: string
+                - not:
+                    enum: ['hello']
 components:
   schemas:
     TestFillDictRef:
