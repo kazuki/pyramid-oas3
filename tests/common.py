@@ -13,10 +13,12 @@ from pyramid_oas3 import ValidationErrors, ResponseValidationError
 def create_webapp(schema_name, patterns, func=None, settings=None):
     import yaml
     temp = settings
+    with open(os.path.join(
+            os.path.dirname(__file__), '{}.yaml'.format(schema_name))) as f:
+        yaml_text = f.read()
     settings = {
         'pyramid.includes': 'pyramid_oas3',
-        'pyramid_oas3.schema': yaml.load(open(os.path.join(
-            os.path.dirname(__file__), '{}.yaml'.format(schema_name))).read()),
+        'pyramid_oas3.schema': yaml.load(yaml_text),
     }
     if temp:
         settings.update(temp)
