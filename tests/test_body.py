@@ -12,6 +12,7 @@ class BodyTests(unittest.TestCase):
         self.app = create_webapp(
             'test_body', [
                 '/test_simple',
+                '/test_array',
                 '/test_fill_default',
                 '/test_fill_default_oneOf',
                 '/test_binary',
@@ -42,6 +43,13 @@ class BodyTests(unittest.TestCase):
         self.app.post('/test_simple', status=406)
         self.app.post(
             '/test_simple', content_type='application/json', status=400)
+
+    def test_array(self):
+        self._post('/test_array', {'foo': 'bar'}, status=400)
+        self._post('/test_array', 'str', status=400)
+        self._post('/test_array', [], status=200)
+        self._post('/test_array', [1, 2, 3], status=200)
+        self._post('/test_array', ['str'], status=400)
 
     def test_fill_default(self):
         m = {'foo': 'bar', 'hoge': 123, 'created': date(2017, 7, 26)}

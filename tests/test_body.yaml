@@ -27,6 +27,16 @@ paths:
                 created:
                   type: string
                   format: date-time
+  /test_array:
+    post:
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              type: array
+              items:
+                type: number
   /test_fill_default:
     post:
       requestBody:

@@ -161,7 +161,29 @@ def _validate_and_parse_param(
     style = param_obj.get(
         'style', 'form' if in_ in ('query', 'cookie') else 'simple')
     explode = param_obj.get('explode', True if style == 'form' else False)
-    typ = schema['type'] if schema else 'object'
+    if not schema:
+        typ = 'object'
+    elif 'type' in schema:
+        typ = schema['type']
+    else:
+        # QUICKHACK(kazuki): 同じプリミティブ型のoneOf/anyOfのみ許容する
+        def _check_subschemas(s, t):
+            st = s.get('type')
+            if st is not None:
+                if t is None:
+                    return st
+                if t == st:
+                    return t
+                raise NotImplementedError
+            ss_list = s.get('oneOf', s.get('anyOf'))
+            if ss_list is None:
+                raise NotImplementedError
+            for ss in ss_list:
+                t = _check_subschemas(ss, t)
+            return t
+        typ = _check_subschemas(schema, None)
+        if typ is None:
+            raise NotImplementedError
 
     if style in ('matrix', 'label', 'spaceDelimited', 'pipeDelimited'):
         raise NotImplementedError  # pragma: no cover

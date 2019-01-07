@@ -16,6 +16,7 @@ class ParameterTests(unittest.TestCase):
                 '/path_test/{d0}/{d1}/{d2}/{d3}/{d4}',
                 '/test_invalid',
                 '/test_fill',
+                '/test_in_query',
             ], settings={'pyramid_oas3.fill_by_default': True})
 
     def _get(self, url, **kwargs):
@@ -151,3 +152,10 @@ class ParameterTests(unittest.TestCase):
         actual.pop('p3')
         expected.pop('p3')
         self.assertEqual(actual, expected)
+
+    def test_in_query(self):
+        actual = self._get('/test_in_query?oneOf0=A&oneOf1=C', status=200)
+        self.assertEqual(actual, {'oneOf0': 'A', 'oneOf1': 'C'})
+        self.app.get('/test_in_query?oneOf0=C&oneOf1=C', status=400)
+        self.app.get('/test_in_query?oneOf0=A&oneOf1=A', status=200)
+        self.app.get('/test_in_query?oneOf0=A&oneOf1=D', status=400)

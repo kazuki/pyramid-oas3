@@ -243,3 +243,25 @@ paths:
           schema:
             type: boolean
             default: false
+  /test_in_query:
+    get:
+      parameters:
+        - name: oneOf0
+          in: query
+          schema:
+            oneOf:
+              - type: string
+                enum: ['A']
+              - type: string
+                enum: ['B']
+        - name: oneOf1
+          in: query
+          schema:
+            oneOf:
+              - type: string
+                enum: ['A']
+              - oneOf:
+                  - type: string
+                    enum: ['B']
+                  - type: string
+                    enum: ['C']
