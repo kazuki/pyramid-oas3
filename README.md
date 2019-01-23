@@ -10,9 +10,15 @@ pyramid_oas3
 設定項目
 --------
 
-* pyramid_oas3.validate_response: [bool] レスポンスのJSONも検証するかを設定します(デフォルト: False)
-* pyramid_oas3.fill_by_default: [bool] リクエストデータに対してOpenAPI定義で設定されたdefault値で埋めるかを設定します(デフォルト: False)
-
+* pyramid_oas3.validate_response: bool
+  * レスポンスのJSONも検証するかを設定します(デフォルト: False)
+* pyramid_oas3.fill_by_default: bool
+  * リクエストデータに対してOpenAPI定義で設定されたdefault値で埋めるかを設定します(デフォルト: False)
+* pyramid_oas3.response_reviver: Optional[Callable[[Union[int, str], JSON_TYPES], Union[JSON_TYPES, pyramid_oas3.UNDEFINED]]]
+  * JSON_TYPES: Union[int, float, str, bool, None, list, dict]
+  * [JSON.parse](https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse)のreviverと同様の処理を、
+    レスポンススキーマ検証実行前に適用するようにします
+  * デフォルト: None (reviverを適用しない)
 
 使い方
 ------
