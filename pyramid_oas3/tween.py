@@ -93,10 +93,6 @@ def validation_tween_factory(handler, registry):
                 raise ValidationErrors(ValidationError(
                     'invalid response status code'))
             content_prop = res_obj.get('content')
-            has_content = content_prop and len(content_prop.keys()) > 0
-            if not has_content and response.has_body:
-                raise ValidationErrors(ValidationError(
-                    'invalid response: body must be empty'))
             if response.content_type == MIME_JSON:
                 res_schema = content_prop.get(MIME_JSON, {}).get('schema')
                 if res_schema:

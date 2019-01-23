@@ -53,7 +53,7 @@ class ResponseTests(unittest.TestCase):
 
     def test_empty(self):
         self.app.get('/test_empty', status=204)
-        self.app.get('/test_empty2', status=500)
+        self.app.get('/test_empty2', status=200)
 
     def test_invalid_status_code(self):
         self.app.get('/test_invalid_status_code', status=500)
