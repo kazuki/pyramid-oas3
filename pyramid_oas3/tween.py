@@ -12,6 +12,7 @@ from pyramid_oas3.resolve import resolve_refs
 from pyramid_oas3.types import _convert_type, _convert_style
 
 
+UNDEFINED = object()
 MIME_JSON = 'application/json'
 
 
@@ -22,6 +23,7 @@ def validation_tween_factory(handler, registry):
         for k, v in registry.settings.items()
         if k.startswith('pyramid_oas3.')}
     validate_response = settings.get('validate_response', False)
+    response_reviver = settings.get('response_reviver', None)
     fill_default = settings.get('fill_by_default', False)
     schema = settings['schema']
     resolver = Resolver('', schema)
@@ -97,6 +99,8 @@ def validation_tween_factory(handler, registry):
                 res_schema = content_prop.get(MIME_JSON, {}).get('schema')
                 if res_schema:
                     res_json = json.loads(response.body.decode('utf8'))
+                    if response_reviver:
+                        res_json = apply_reviver(res_json, response_reviver)
                     _validate(Validator, res_schema, res_json)
         except Exception as e:
             raise ResponseValidationError(response, e)
@@ -249,3 +253,27 @@ class ResponseValidationError(Exception):
     def __init__(self, response, exception):
         self.response = response
         self.exception = exception
+
+
+def apply_reviver(obj, reviver):
+    obj = _apply_reviver(obj, reviver)
+    obj = reviver('', obj)
+    if obj == UNDEFINED:
+        raise RuntimeError('reviver cannot remove root object')
+    return obj
+
+
+def _apply_reviver(obj, reviver):
+    if isinstance(obj, dict):
+        return {
+            k: v for k, v in [
+                (k, reviver(k, _apply_reviver(v, reviver)))
+                for k, v in obj.items()]
+            if v != UNDEFINED}
+    if isinstance(obj, list):
+        return [
+            v for v in [
+                reviver(k, _apply_reviver(v, reviver))
+                for k, v in enumerate(obj)]
+            if v != UNDEFINED]
+    return obj

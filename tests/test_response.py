@@ -1,4 +1,5 @@
 import json
+import math
 import unittest
 
 from nose2.tools import params
@@ -28,6 +29,7 @@ class ResponseTests(unittest.TestCase):
                 ('/test_empty', empty),
                 ('/test_empty2', plaintext),
                 ('/test_invalid_status_code', empty),
+                ('/test_reviver', test),
             ]
             for i, (path, handler) in enumerate(entries):
                 name = 'test{}'.format(i)
@@ -35,7 +37,8 @@ class ResponseTests(unittest.TestCase):
                 config.add_view(handler, route_name=name)
 
         self.app = create_webapp('test_response', [], func=setup, settings={
-            'pyramid_oas3.validate_response': True
+            'pyramid_oas3.validate_response': True,
+            'pyramid_oas3.response_reviver': _reviver
         })
 
     def _post(self, url, body, **kwargs):
@@ -57,3 +60,26 @@ class ResponseTests(unittest.TestCase):
 
     def test_invalid_status_code(self):
         self.app.get('/test_invalid_status_code', status=500)
+
+    def test_reviver(self):
+        def ext(v):
+            return {'__extendData__': True, 'type': 'number', 'value': v}
+
+        path = '/test_reviver'
+        self._post(path, [
+            ext('NaN'), ext('nan'),
+            ext('Inf'), ext('Infinity'),
+            ext('-Inf'), ext('-Infinity')
+        ], status=200)
+        self._post(path, [ext('HOGE')], status=500)
+        self._post(path, ['foo'], status=500)
+        self._post(path, [123, math.nan, math.inf, -math.inf], status=200)
+
+
+def _reviver(key, value):
+    if not isinstance(value, dict) or '__extendData__' not in value:
+        return value
+    typ = value.get('type')
+    if typ != 'number':
+        return value
+    return float(value['value'])

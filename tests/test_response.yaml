@@ -57,3 +57,17 @@ paths:
         '200':
           content:
             text/plain:
+  /test_reviver:
+    post:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    additionalProperties:
+                      type: number
+                  - type: array
+                    items:
+                      type: number

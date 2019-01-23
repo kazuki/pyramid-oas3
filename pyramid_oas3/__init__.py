@@ -2,13 +2,14 @@
 import pyramid
 
 from pyramid_oas3.tween import (
-    validation_tween_factory, ResponseValidationError)
+    validation_tween_factory, ResponseValidationError, UNDEFINED)
 from pyramid_oas3.jsonschema.exceptions import ValidationErrors
 
 __all__ = [
     'validation_tween_factory',
     'ValidationErrors',
     'ResponseValidationError',
+    'UNDEFINED',
 ]
 
 
