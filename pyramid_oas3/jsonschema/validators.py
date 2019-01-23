@@ -84,7 +84,7 @@ class _Validator(object):
         try:
             self.validate(instance)
             return True
-        except NotImplementedError as e:
+        except NotImplementedError:
             raise
         except Exception:
             return False
