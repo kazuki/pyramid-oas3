@@ -132,7 +132,7 @@ def _validate_and_parse(
         if '$ref' in reqbody:
             _, reqbody = resolver.resolve(reqbody['$ref'])
         accept_types = set(reqbody.get('content', {}).keys())
-        if not accept_types or request.content_type not in accept_types:
+        if not _validate_media_types(request.content_type, accept_types):
             raise HTTPNotAcceptable
         media_type_obj = reqbody.get('content', {}).get(MIME_JSON)
         if media_type_obj is not None:
@@ -146,6 +146,16 @@ def _validate_and_parse(
             if json_schema:
                 body = _validate(Validator, json_schema, body)
     return params, body
+
+
+def _validate_media_types(media_type, media_types):
+    if media_type in media_types or '*/*' in media_types:
+        return True
+    if media_type.split('/', 1)[0] + '/*' in media_types:
+        return True
+    if 'application/octet-stream' in media_types:
+        return True
+    return False
 
 
 def _validate_and_parse_param(

@@ -96,7 +96,6 @@ paths:
     post:
       requestBody:
         content:
-          application/octet-stream:
           multipart/form-data:
   /test_fill_ref:
     post:
@@ -168,6 +167,23 @@ paths:
                 - type: string
                 - not:
                     enum: ['hello']
+  /test_content_type:
+    post:
+      requestBody:
+        content:
+          'application/json':
+          'text/plain':
+          'hoge/*':
+  /test_content_type2:
+    post:
+      requestBody:
+        content:
+          '*/*':
+  /test_content_type3:
+    post:
+      requestBody:
+        content:
+          'application/octet-stream':
 components:
   schemas:
     TestFillDictRef:

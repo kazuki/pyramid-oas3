@@ -21,6 +21,9 @@ class BodyTests(unittest.TestCase):
                 '/test_oneOf_error',
                 '/test_not0',
                 '/test_not1',
+                '/test_content_type',
+                '/test_content_type2',
+                '/test_content_type3',
             ], settings={'pyramid_oas3.fill_by_default': True})
 
     def _post(self, url, body, **kwargs):
@@ -103,3 +106,19 @@ class BodyTests(unittest.TestCase):
         self._post('/test_not1', 'hello', status=400)
         self._post('/test_not1', 123, status=400)
         self._post('/test_not1', {}, status=400)
+
+    def test_content_type(self):
+        self.app.post('/test_content_type', '{}',
+                      [('Content-Type', 'application/json')], status=200)
+        self.app.post('/test_content_type', 'ok',
+                      [('Content-Type', 'text/plain')], status=200)
+        self.app.post('/test_content_type', b'foo',
+                      [('Content-Type', 'hoge/foo')], status=200)
+        self.app.post('/test_content_type', b'bar',
+                      [('Content-Type', 'hoge/bar')], status=200)
+        self.app.post('/test_content_type', b'bar',
+                      [('Content-Type', 'image/png')], status=406)
+        self.app.post('/test_content_type2', b'PNG',
+                      [('Content-Type', 'image/png')], status=200)
+        self.app.post('/test_content_type3', b'PNG',
+                      [('Content-Type', 'image/png')], status=200)
