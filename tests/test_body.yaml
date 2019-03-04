@@ -184,6 +184,40 @@ paths:
       requestBody:
         content:
           'application/octet-stream':
+  /test_empty0:
+    post:
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              type: object
+              properties:
+                hoge:
+                  type: string
+  /test_empty1:
+    post:
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              type: object
+              properties:
+                hoge:
+                  type: string
+  /test_empty2:
+    post:
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              type: object
+              required:
+                - hoge
+              properties:
+                hoge:
+                  type: string
 components:
   schemas:
     TestFillDictRef:

@@ -24,6 +24,9 @@ class BodyTests(unittest.TestCase):
                 '/test_content_type',
                 '/test_content_type2',
                 '/test_content_type3',
+                '/test_empty0',
+                '/test_empty1',
+                '/test_empty2',
             ], settings={'pyramid_oas3.fill_by_default': True})
 
     def _post(self, url, body, **kwargs):
@@ -43,7 +46,7 @@ class BodyTests(unittest.TestCase):
         self._post('/test_simple', {
             'foo': 'bar', 'hoge': 123,
             'created': '2017-12-21 00:00:00+00:00'}, status=400)
-        self.app.post('/test_simple', status=406)
+        self.app.post('/test_simple', status=400)
         self.app.post(
             '/test_simple', content_type='application/json', status=400)
 
@@ -122,3 +125,15 @@ class BodyTests(unittest.TestCase):
                       [('Content-Type', 'image/png')], status=200)
         self.app.post('/test_content_type3', b'PNG',
                       [('Content-Type', 'image/png')], status=200)
+
+    def test_empty(self):
+        self.app.post('/test_empty0', '{}',
+                      [('Content-Type', 'application/json')], status=200)
+        self.app.post('/test_empty1', '{}',
+                      [('Content-Type', 'application/json')], status=200)
+        self.app.post('/test_empty2', '{"hoge": "hello"}',
+                      [('Content-Type', 'application/json')], status=200)
+        self.app.post('/test_empty1', '', [], status=400)
+        self.app.post('/test_empty2', '{}',
+                      [('Content-Type', 'application/json')], status=400)
+        self.app.post('/test_empty0', '', [], status=200)

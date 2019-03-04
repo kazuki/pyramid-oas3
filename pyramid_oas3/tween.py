@@ -135,16 +135,16 @@ def _validate_and_parse(
     if reqbody:
         if '$ref' in reqbody:
             _, reqbody = resolver.resolve(reqbody['$ref'])
+        required = reqbody.get('required', False)
+        body = request.body
+        if required and not body:
+            raise ValidationErrors(ValidationError('body is required'))
         accept_types = set(reqbody.get('content', {}).keys())
-        if not _validate_media_types(request.content_type, accept_types):
+        if (body and
+                not _validate_media_types(request.content_type, accept_types)):
             raise HTTPNotAcceptable
         media_type_obj = reqbody.get('content', {}).get(MIME_JSON)
-        if media_type_obj is not None:
-            required = reqbody.get('required', False)
-            body = request.body
-            if required and not body:
-                raise ValidationErrors(ValidationError(
-                    'json body is required'))
+        if media_type_obj is not None and body:
             body = json.loads(body.decode('utf8'))
             json_schema = media_type_obj.get('schema')
             if json_schema:
