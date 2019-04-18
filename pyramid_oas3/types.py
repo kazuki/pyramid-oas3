@@ -50,8 +50,8 @@ def _convert_style(style, explode, typ, value):
         style, explode, typ))  # pragma: no cover
 
 
-def _convert_type(schema, value):
-    typ = schema.get('type', 'object')
+def _convert_type(schema, value, default_type='object'):
+    typ = schema.get('type', default_type)
     fmt = schema.get('format')
     if typ == 'string':
         return value

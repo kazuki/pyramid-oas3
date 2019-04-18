@@ -171,27 +171,27 @@ def _validate_and_parse_param(
     style = param_obj.get(
         'style', 'form' if in_ in ('query', 'cookie') else 'simple')
     explode = param_obj.get('explode', True if style == 'form' else False)
+    type_tries = set()
     if not schema:
         typ = 'object'
     elif 'type' in schema:
         typ = schema['type']
     else:
-        # QUICKHACK(kazuki): 同じプリミティブ型のoneOf/anyOfのみ許容する
-        def _check_subschemas(s, t):
+        # QUICKHACK(kazuki): プリミティブ型のoneOf/anyOfのみ許容する
+        def _check_subschemas(s):
             st = s.get('type')
             if st is not None:
-                if t is None:
+                if st in ('integer', 'number', 'string', 'boolean'):
+                    type_tries.add(st)
                     return st
-                if t == st:
-                    return t
                 raise NotImplementedError
             ss_list = s.get('oneOf', s.get('anyOf'))
-            if ss_list is None:
+            if not ss_list:
                 raise NotImplementedError
             for ss in ss_list:
-                t = _check_subschemas(ss, t)
+                t = _check_subschemas(ss)
             return t
-        typ = _check_subschemas(schema, None)
+        typ = _check_subschemas(schema)
         if typ is None:
             raise NotImplementedError
 
@@ -227,20 +227,32 @@ def _validate_and_parse_param(
     if value is None:
         return {}
 
-    if not isinstance(value, dict):
-        try:
-            value = _convert_style(style, explode, typ, value)
-        except Exception as e:
-            raise ValidationErrors(StyleError(
-                'invalid style of "{}": {}'.format(name, e)))
-    if schema:
-        try:
-            value = _convert_type(schema, value)
-        except Exception as e:
-            raise ValidationErrors(ValueError(
-                'invalid value of "{}": {}'.format(name, e)))
-        value = _validate(Validator, schema, value)
-    return {name: value}
+    if not type_tries:
+        type_tries.add(typ)
+
+    errors = []
+    for typ in type_tries:
+        if not isinstance(value, dict):
+            try:
+                value = _convert_style(style, explode, typ, value)
+            except Exception as e:
+                errors.append(StyleError(
+                    'invalid style of "{}": {}'.format(name, e)))
+                continue
+        if schema:
+            try:
+                value = _convert_type(schema, value, default_type=typ)
+            except Exception as e:
+                errors.append(ValueError(
+                    'invalid value of "{}": {}'.format(name, e)))
+                continue
+            try:
+                value = _validate(Validator, schema, value)
+            except Exception as e:
+                errors.append(e)
+                continue
+        return {name: value}
+    raise ValidationErrors(errors)
 
 
 def _validate(Validator, schema, instance):

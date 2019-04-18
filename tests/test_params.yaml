@@ -265,3 +265,12 @@ paths:
                     enum: ['B']
                   - type: string
                     enum: ['C']
+        - name: oneOf2
+          in: query
+          schema:
+            oneOf:
+              - type: string
+                enum: ['A']
+              - type: integer
+                minimum: 0
+              - type: boolean
