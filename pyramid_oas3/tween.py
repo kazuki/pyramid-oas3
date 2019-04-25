@@ -145,7 +145,10 @@ def _validate_and_parse(
             raise HTTPNotAcceptable
         media_type_obj = reqbody.get('content', {}).get(MIME_JSON)
         if media_type_obj is not None and body:
-            body = json.loads(body.decode('utf8'))
+            try:
+                body = json.loads(body.decode('utf8'))
+            except Exception:
+                raise ValidationErrors(ValidationError('invalid json'))
             json_schema = media_type_obj.get('schema')
             if json_schema:
                 body = _validate(Validator, json_schema, body)

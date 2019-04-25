@@ -137,3 +137,10 @@ class BodyTests(unittest.TestCase):
         self.app.post('/test_empty2', '{}',
                       [('Content-Type', 'application/json')], status=400)
         self.app.post('/test_empty0', '', [], status=200)
+
+    def test_invalid_json(self):
+        self.app.post(
+            '/test_simple',
+            params=b'{""test"": "hoge"}',
+            status=400,
+            content_type='application/json')
